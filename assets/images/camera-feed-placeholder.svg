@@ -1,0 +1,10 @@
+<svg width="640" height="480" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100%" height="100%" fill="#1a1a1a"/>
+  <text x="50%" y="50%" font-family="Arial" font-size="24" fill="#64DD17" text-anchor="middle">Camera Feed Placeholder</text>
+  <rect x="20" y="20" width="600" height="440" stroke="#64DD17" stroke-width="2" fill="none" rx="5" ry="5"/>
+  <circle cx="580" cy="40" r="10" fill="#64DD17">
+    <animate attributeName="opacity" values="1;0.3;1" dur="2s" repeatCount="indefinite" />
+  </circle>
+  <text x="50%" y="65%" font-family="monospace" font-size="16" fill="#dddddd" text-anchor="middle">Resolution: 640x480</text>
+  <text x="50%" y="70%" font-family="monospace" font-size="16" fill="#dddddd" text-anchor="middle">Status: Idle</text>
+</svg>

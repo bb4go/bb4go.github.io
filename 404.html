@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en" class="dark-theme">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Page not found - b4go's Blog">
+    <meta property="og:title" content="404 - Page Not Found">
+    <meta property="og:description" content="The page you're looking for doesn't exist or has been moved.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://bb4go.github.io/404.html">
+    <link rel="canonical" href="https://bb4go.github.io/404.html">
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="css/style.css">
+    <title>404 - Page Not Found | b4go | Cybersecurity Write-ups & Projects | CTF, Hacking Tutorials</title>
+</head>
+<body>
+    <header>
+        <div class="header-content container">
+            <div class="logo">
+                <a href="index.html">b4go</a>
+            </div>
+            <nav class="main-nav">
+                <button class="mobile-menu-toggle" aria-label="Toggle menu">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <ul class="nav-list">
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="projects.html">Projects</a></li>
+                    <li><a href="writeups.html">Write-ups</a></li>
+                    <li><a href="about.html">About Me</a></li>
+                    <li>
+                        <button class="theme-toggle" aria-label="Toggle theme">
+                            <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+                            <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                        </button>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <section class="error-404">
+            <div class="container">
+                <div class="error-content">
+                    <h1>404</h1>
+                    <h2>Not Found</h2>
+                    <div class="error-terminal">
+                        <div class="terminal-header">
+                            <div class="terminal-buttons">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                            <div class="terminal-title">Terminal</div>
+                        </div>
+                        <div class="terminal-body">
+                            <p class="terminal-line">$ ssh user@page-you-requested</p>
+                            <p class="terminal-line">ssh: connect to host page-you-requested port 22: Connection refused</p>
+                            <p class="terminal-line">$ nmap -p- page-you-requested</p>
+                            <p class="terminal-line">Starting Nmap scan...</p>
+                            <p class="terminal-line">0 ports open</p>
+                            <p class="terminal-line">$ echo "The page you're looking for doesn't exist or has been moved."</p>
+                            <p class="terminal-line">The page you're looking for doesn't exist or has been moved.</p>
+                            <p class="terminal-line terminal-cursor">_</p>
+                        </div>
+                    </div>
+                    <div class="error-actions">
+                        <a href="index.html" class="btn primary">Return Home</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+    <script src="js/theme.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
