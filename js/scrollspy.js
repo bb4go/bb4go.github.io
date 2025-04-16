@@ -8,8 +8,8 @@ document.addEventListener('DOMContentLoaded', function() {
  
   const observerOptions = {
     root: null,
-    rootMargin: '-80px 0px -60px 0px',
-    threshold: 0.2
+    rootMargin: '-100px 0px 0px 0px',
+    threshold: 0.1
   };
   
   const idToLinkMap = {};
@@ -25,17 +25,23 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   function handleIntersection(entries) {
+    let maxRatio = 0;
+    let currentId = null;
+  
     entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        const id = entry.target.getAttribute('id');
-        const link = idToLinkMap[id];
-        if (link) {
-          removeActiveClass();
-          link.classList.add('active');
-        }
+      if (entry.isIntersecting && entry.intersectionRatio > maxRatio) {
+        maxRatio = entry.intersectionRatio;
+        currentId = entry.target.id;
       }
     });
+  
+    if (currentId) {
+      removeActiveClass();
+      const link = idToLinkMap[currentId];
+      if (link) link.classList.add('active');
+    }
   }
+  
   
   const observer = new IntersectionObserver(handleIntersection, observerOptions);
   sections.forEach(section => observer.observe(section));
