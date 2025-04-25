@@ -1,16 +1,21 @@
-function estimateReadingTime(content, wordsPerMinute = 100) {
-    const text = content.innerText || content.textContent;
-    const wordCount = text.trim().split(/\s+/).length;
-    const time = Math.ceil(wordCount / wordsPerMinute);
-    return time;
+function estimateReadingTime(content, wpm = 100, codeWeight = 0.5) {
+    const clone = content.cloneNode(true);
+    const codeBlocks = clone.querySelectorAll('pre, code');
+    
+    let codeWords = 0;
+    codeBlocks.forEach(el => {
+        codeWords += el.textContent.trim().split(/\s+/).length;
+        el.remove();
+    });
+    
+    const textWords = clone.textContent.trim().split(/\s+/).length;
+    return Math.ceil((textWords + codeWords * codeWeight) / wpm);
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-    const mainContent = document.querySelector(".main-content");
+    const content = document.querySelector(".main-content");
     const display = document.getElementById("reading-time");
-
-    if (mainContent && display) {
-        const time = estimateReadingTime(mainContent);
-        display.textContent = `${time} min read`;
+    if (content && display) {
+        display.textContent = `${estimateReadingTime(content)} min read`;
     }
 });
