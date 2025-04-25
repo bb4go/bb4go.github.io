@@ -1,4 +1,4 @@
-function estimateReadingTime(content, wpm = 100, codeWeight = 0.5) {
+function estimateReadingTime(content, wpm = 75, codeWeight = 0.25) {
     const clone = content.cloneNode(true);
     const codeBlocks = clone.querySelectorAll('pre, code');
     
