@@ -1214,3 +1214,11 @@ footer {
   height: auto;
   display: block;
 }
+.code-block pre {
+  max-height: 400px;
+  overflow: auto;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 10px;
+}
+
