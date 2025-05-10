@@ -275,12 +275,7 @@
                             <p>I checked if there are any default credentials for this software and it is administrator:radius</p>
                             <p>The version is 2.2 for radius management and immediately go check if there is any vuln
                                 found this article <a href="https://www.sonicwall.com/blog/daloradius-web-management-rce">daloRADIUS web management RCE</a></p>
-
-
-                           
-                        </section>
-                       
-                        
+                                       
                             <p>I tried the exploit but was not able to get RCE through it, So I keep enumerating the page</p>     
                            
                             <p>User svcMosh that has a md5-password in Management tab, lets decrypt it</p>
@@ -379,13 +374,13 @@
                             <section id="conclusion" class="content-section">
                                 <h2>Conclusion</h2>
                                 <br>
-                                <p><strong>UnderPass</strong> shows how a chain of “small” oversights public SNMP strings, a forgotten daloRADIUS panel with default creds, weak password storage, and a <code>sudo</code> rule can snowball into full root compromise. 
+                                <p><strong>UnderPass</strong> shows how a chain of “small” oversights public SNMP strings, a forgotten daloRADIUS panel with default creds, weak password storage, and a <code>sudo</code> rule can snowball into full root compromise.</p>
                             
                                 <h3>Prevention Tips:</h3>
                                 <ul>
                                     <li>Replace the default <code>public</code> SNMP community string and restrict SNMP to a management network or VPN.</li>
                                     <li>Patch or retire end-of-life web admin panels like daloRADIUS; if they must stay, hide them behind a VPN/reverse proxy and disable default accounts immediately.</li>
-                                    <li>Store credentials with modern salted hashes (bcrypt/Argon2) and enforce strong, unique passwords—no more unsalted MD5.</li>
+                                    <li>Store credentials with modern salted hashes (bcrypt/Argon2) and enforce strong, unique passwords.</li>
                                     <li>Review <code>/etc/sudoers</code> for NOPASSWD entries; never grant them to interactive network daemons (e.g., <code>mosh-server</code>) unless strictly required.</li>
         
                                 </ul>
